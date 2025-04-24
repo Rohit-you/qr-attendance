@@ -8,7 +8,7 @@ import CustomButton from "@/components/CustomButton";
 import { generateQRCode } from "@/services/QRCodeService";
 import { QRData } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import QRCode from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react"; // Fixed import statement
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 
@@ -110,7 +110,7 @@ const GenerateQRPage = () => {
             {generatedQR && (
               <div className="mt-8 text-center">
                 <div className="border rounded-lg p-4 inline-block bg-white">
-                  <QRCode value={generatedQR} size={200} />
+                  <QRCodeCanvas value={generatedQR} size={200} /> 
                 </div>
                 <p className="mt-4 text-sm text-gray-500">
                   Subject: {subject}
