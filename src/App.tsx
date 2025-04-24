@@ -35,13 +35,16 @@ const ProtectedRoute = ({
   }
 
   if (!user) {
+    console.log("No user found, redirecting to login");
     return <Navigate to="/" replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    console.log(`User role ${user.role} not allowed, redirecting to dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log("User authenticated:", user);
   return children;
 };
 
