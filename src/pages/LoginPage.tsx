@@ -14,7 +14,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
 
-  // If user is already logged in, redirect to dashboard
   if (user) {
     navigate("/dashboard");
   }
@@ -27,7 +26,7 @@ const LoginPage = () => {
         toast.success("Login successful!");
         navigate("/dashboard");
       } else {
-        toast.error("Invalid PRN or name.");
+        toast.error("Login failed. Please try again.");
       }
     } catch (error) {
       toast.error("Login failed. Please try again.");
@@ -42,7 +41,7 @@ const LoginPage = () => {
         toast.success("Login successful!");
         navigate("/dashboard");
       } else {
-        toast.error("Invalid email or password.");
+        toast.error("Login failed. Please try again.");
       }
     } catch (error) {
       toast.error("Login failed. Please try again.");
@@ -75,19 +74,9 @@ const LoginPage = () => {
             </TabsList>
             <TabsContent value="student">
               <StudentLoginForm onSubmit={handleStudentLogin} />
-              <div className="mt-4 p-3 bg-gray-50 rounded-md border text-sm text-gray-600">
-                <p><strong>Demo Credentials:</strong></p>
-                <p>PRN: 1234567890123</p>
-                <p>Name: John Doe</p>
-              </div>
             </TabsContent>
             <TabsContent value="faculty">
               <FacultyLoginForm onSubmit={handleFacultyLogin} />
-              <div className="mt-4 p-3 bg-gray-50 rounded-md border text-sm text-gray-600">
-                <p><strong>Demo Credentials:</strong></p>
-                <p>Email: faculty@college.edu</p>
-                <p>Password: password</p>
-              </div>
             </TabsContent>
           </Tabs>
         </Card>
