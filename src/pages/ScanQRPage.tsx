@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ScanLine, Camera } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
 
 const ScanQRPage = () => {
   const { user } = useAuth();
@@ -53,8 +53,8 @@ const ScanQRPage = () => {
         source: CameraSource.Camera,
         promptLabelHeader: 'Scan QR Code',
         promptLabelCancel: 'Cancel',
-        // Try to use back camera by default for QR scanning
-        direction: 'rear'
+        // Use correct enum for camera direction
+        direction: CameraDirection.Rear
       });
 
       if (image && image.base64String) {
@@ -88,10 +88,14 @@ const ScanQRPage = () => {
   const handleMarkAttendance = () => {
     if (user && scannedData && user.role === "student") {
       try {
-        AttendanceService.markAttendance(
-          { ...user, prn: user.prn || "1234567890123" } as any,
-          scannedData
-        );
+        // Assuming the student user has a PRN property
+        // We'll create a typed student object with a default PRN if it doesn't exist
+        const studentUser = {
+          ...user,
+          prn: (user as any).prn || "1234567890123" // Default PRN if not available
+        };
+        
+        AttendanceService.markAttendance(studentUser, scannedData);
         setSuccess(true);
         toast.success("Attendance marked successfully!");
       } catch (err: any) {
