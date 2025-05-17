@@ -68,6 +68,22 @@ class AttendanceService {
       (record) => record.qrData.subject === subject
     );
   }
+
+  public getAttendanceByDateRange(startDate: Date, endDate: Date): AttendanceRecord[] {
+    return this.attendanceRecords.filter((record) => {
+      const recordDate = new Date(record.timestamp);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
+  }
+
+  public getFacultyAttendanceByDateRange(facultyId: string, startDate: Date, endDate: Date): AttendanceRecord[] {
+    return this.attendanceRecords.filter((record) => {
+      const recordDate = new Date(record.timestamp);
+      return record.qrData.facultyId === facultyId && 
+             recordDate >= startDate && 
+             recordDate <= endDate;
+    });
+  }
 }
 
 export default AttendanceService.getInstance();

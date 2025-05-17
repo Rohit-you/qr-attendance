@@ -10,6 +10,7 @@ import DashboardPage from "./pages/DashboardPage";
 import GenerateQRPage from "./pages/GenerateQRPage";
 import ScanQRPage from "./pages/ScanQRPage";
 import AttendancePage from "./pages/AttendancePage";
+import ReportsPage from "./pages/ReportsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useEffect, useState } from "react";
 
@@ -86,6 +87,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AttendancePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute allowedRoles={["faculty", "hod"]}>
+                  <ReportsPage />
                 </ProtectedRoute>
               } 
             />
