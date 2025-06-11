@@ -2,7 +2,6 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import AttendanceService from "@/services/AttendanceService";
 import { QRData } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,6 +10,8 @@ import { useCapacitorDetection } from "@/hooks/useCapacitorDetection";
 import QRScanner from "@/components/qr/QRScanner";
 import QRDataDisplay from "@/components/qr/QRDataDisplay";
 import SuccessDisplay from "@/components/qr/SuccessDisplay";
+import { parseQRCode } from "@/services/QRCodeService";
+import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
 const ScanQRPage = () => {
   const { user } = useAuth();
@@ -28,23 +29,34 @@ const ScanQRPage = () => {
     setError(errorMessage);
   };
 
-  const handleMarkAttendance = () => {
-    if (user && scannedData && user.role === "student") {
-      try {
-        // Ensure we're explicitly casting to Student type with role: "student"
-        const studentUser = {
-          ...user,
-          role: "student" as const, // Use const assertion to specify exact type
-          prn: (user as any).prn || "1234567890123" // Default PRN if not available
-        };
-        
-        AttendanceService.markAttendance(studentUser, scannedData);
-        setSuccess(true);
-        toast.success("Attendance marked successfully!");
-      } catch (err: any) {
-        setError(err.message || "Failed to mark attendance");
-        toast.error(err.message || "Failed to mark attendance");
+  const handleMarkAttendance = async () => {
+    if (!user || !scannedData || user.role !== "student") {
+      toast.error("Not authorized to mark attendance");
+      return;
+    }
+
+    try {
+      // Verify QR code is still valid in database
+      const qrCode = await supabaseAttendanceService.getQRCode(scannedData.id);
+      if (!qrCode) {
+        setError("QR code is invalid or expired");
+        toast.error("QR code is invalid or expired");
+        return;
       }
+
+      // Mark attendance
+      await supabaseAttendanceService.markAttendance({
+        student_id: user.id,
+        qr_code_id: scannedData.id,
+        subject_id: scannedData.subjectId
+      });
+
+      setSuccess(true);
+      toast.success("Attendance marked successfully!");
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to mark attendance";
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

@@ -1,47 +1,91 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CustomButton from "@/components/CustomButton";
 import { generateQRCode } from "@/services/QRCodeService";
-import { QRData } from "@/types";
+import { QRData, Subject } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { QRCodeCanvas } from "qrcode.react"; // Fixed import statement
-import { v4 as uuidv4 } from "uuid";
+import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
+import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
 const GenerateQRPage = () => {
   const { user } = useAuth();
-  const [subject, setSubject] = useState("");
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
   const [time, setTime] = useState("");
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [qrData, setQrData] = useState<QRData | null>(null);
 
-  const handleGenerateQR = () => {
-    if (!subject || !date || !time) {
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
+    const fetchedSubjects = await supabaseAttendanceService.getSubjects();
+    setSubjects(fetchedSubjects);
+  };
+
+  const handleGenerateQR = async () => {
+    if (!selectedSubjectId || !date || !time) {
       toast.error("Please fill all fields");
+      return;
+    }
+
+    if (!user) {
+      toast.error("User not authenticated");
       return;
     }
 
     setIsLoading(true);
     try {
-      const qrData: QRData = {
-        id: uuidv4(),
-        subject,
+      const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
+      if (!selectedSubject) {
+        toast.error("Subject not found");
+        return;
+      }
+
+      // Set expiration to 2 hours from now
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 2);
+
+      // Create QR code in database
+      const qrCode = await supabaseAttendanceService.createQRCode({
+        subject_id: selectedSubjectId,
+        faculty_id: user.id,
+        class_date: date,
+        class_time: time,
+        expires_at: expiresAt.toISOString()
+      });
+
+      if (!qrCode) {
+        toast.error("Failed to create QR code");
+        return;
+      }
+
+      const qrDataObj: QRData = {
+        id: qrCode.id,
+        subject: selectedSubject.name,
+        subjectId: selectedSubjectId,
         date,
         time,
-        facultyId: user?.id || "",
+        facultyId: user.id,
+        expiresAt: expiresAt.toISOString()
       };
 
-      const qrString = generateQRCode(qrData);
+      const qrString = generateQRCode(qrDataObj);
       setGeneratedQR(qrString);
+      setQrData(qrDataObj);
       toast.success("QR code generated successfully!");
     } catch (error) {
+      console.error("Error generating QR code:", error);
       toast.error("Failed to generate QR code");
     } finally {
       setIsLoading(false);
@@ -49,10 +93,11 @@ const GenerateQRPage = () => {
   };
 
   const handleResetForm = () => {
-    setSubject("");
+    setSelectedSubjectId("");
     setDate(new Date().toISOString().split("T")[0]);
     setTime("");
     setGeneratedQR(null);
+    setQrData(null);
   };
 
   return (
@@ -63,14 +108,20 @@ const GenerateQRPage = () => {
             <form className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject</Label>
-                <Input
+                <select
                   id="subject"
-                  type="text"
-                  placeholder="e.g., Advanced Mathematics"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={selectedSubjectId}
+                  onChange={(e) => setSelectedSubjectId(e.target.value)}
                   required
-                />
+                >
+                  <option value="">Select a subject</option>
+                  {subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name} ({subject.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -107,23 +158,24 @@ const GenerateQRPage = () => {
               </div>
             </form>
 
-            {generatedQR && (
+            {generatedQR && qrData && (
               <div className="mt-8 text-center">
                 <div className="border rounded-lg p-4 inline-block bg-white">
                   <QRCodeCanvas value={generatedQR} size={200} /> 
                 </div>
                 <p className="mt-4 text-sm text-gray-500">
-                  Subject: {subject}
+                  Subject: {qrData.subject}
                   <br />
-                  Date: {new Date(date).toLocaleDateString()}
+                  Date: {new Date(qrData.date).toLocaleDateString()}
                   <br />
-                  Time: {time}
+                  Time: {qrData.time}
+                  <br />
+                  Expires: {new Date(qrData.expiresAt).toLocaleString()}
                 </p>
                 <div className="mt-4">
                   <CustomButton
                     variant="outline"
                     onClick={handleResetForm}
-                    className="mr-2"
                   >
                     Generate New QR
                   </CustomButton>

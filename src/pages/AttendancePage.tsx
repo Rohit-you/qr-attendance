@@ -2,48 +2,61 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import AttendanceService from "@/services/AttendanceService";
-import { AttendanceRecord } from "@/types";
+import { AttendanceRecordWithDetails } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
 const AttendancePage = () => {
   const { user } = useAuth();
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>([]);
+  const [records, setRecords] = useState<AttendanceRecordWithDetails[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecordWithDetails[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      let attendanceRecords: AttendanceRecord[] = [];
+      loadAttendanceRecords();
+    }
+  }, [user]);
+
+  const loadAttendanceRecords = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      let attendanceRecords: AttendanceRecordWithDetails[] = [];
       
       if (user.role === "student") {
-        attendanceRecords = AttendanceService.getStudentAttendance(user.id);
+        attendanceRecords = await supabaseAttendanceService.getStudentAttendance(user.id);
       } else if (user.role === "faculty") {
-        attendanceRecords = AttendanceService.getFacultyAttendance(user.id);
-      } else if (user.role === "hod") {
-        // For HOD, get all records (not implemented in this demo)
-        attendanceRecords = [];
+        attendanceRecords = await supabaseAttendanceService.getFacultyAttendance(user.id);
       }
       
       setRecords(attendanceRecords);
       setFilteredRecords(attendanceRecords);
       
       // Extract unique subjects
-      const uniqueSubjects = [...new Set(attendanceRecords.map(record => record.qrData.subject))];
+      const uniqueSubjects = [...new Set(
+        attendanceRecords.map(record => record.qr_codes?.subjects?.name).filter(Boolean)
+      )] as string[];
       setSubjects(uniqueSubjects);
+    } catch (error) {
+      console.error("Error loading attendance records:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     let filtered = [...records];
     
     if (selectedSubject) {
       filtered = filtered.filter(
-        (record) => record.qrData.subject === selectedSubject
+        (record) => record.qr_codes?.subjects?.name === selectedSubject
       );
     }
     
@@ -51,14 +64,24 @@ const AttendancePage = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (record) =>
-          record.qrData.subject.toLowerCase().includes(term) ||
-          record.studentName.toLowerCase().includes(term) ||
-          new Date(record.qrData.date).toLocaleDateString().includes(term)
+          record.qr_codes?.subjects?.name?.toLowerCase().includes(term) ||
+          record.users?.name?.toLowerCase().includes(term) ||
+          new Date(record.qr_codes?.class_date || '').toLocaleDateString().includes(term)
       );
     }
     
     setFilteredRecords(filtered);
   }, [searchTerm, selectedSubject, records]);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Attendance Records">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">Loading attendance records...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Attendance Records">
@@ -123,25 +146,31 @@ const AttendancePage = () => {
                         Student
                       </th>
                     )}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Marked At
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {record.qrData.subject}
+                        {record.qr_codes?.subjects?.name} ({record.qr_codes?.subjects?.code})
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(record.qrData.date).toLocaleDateString()}
+                        {record.qr_codes?.class_date ? new Date(record.qr_codes.class_date).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.qrData.time}
+                        {record.qr_codes?.class_time || 'N/A'}
                       </td>
                       {user?.role !== "student" && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {record.studentName}
+                          {record.users?.name} ({record.users?.prn})
                         </td>
                       )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {record.marked_at ? new Date(record.marked_at).toLocaleString() : 'N/A'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

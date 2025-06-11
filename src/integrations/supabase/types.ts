@@ -13,14 +13,164 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          marked_at: string | null
+          qr_code_id: string | null
+          student_id: string | null
+          subject_id: string | null
         }
         Insert: {
           created_at?: string
           id?: number
+          marked_at?: string | null
+          qr_code_id?: string | null
+          student_id?: string | null
+          subject_id?: string | null
         }
         Update: {
           created_at?: string
           id?: number
+          marked_at?: string | null
+          qr_code_id?: string | null
+          student_id?: string | null
+          subject_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_codes: {
+        Row: {
+          class_date: string
+          class_time: string
+          created_at: string | null
+          expires_at: string
+          faculty_id: string
+          id: string
+          is_active: boolean | null
+          subject_id: string
+        }
+        Insert: {
+          class_date: string
+          class_time: string
+          created_at?: string | null
+          expires_at: string
+          faculty_id: string
+          id?: string
+          is_active?: boolean | null
+          subject_id: string
+        }
+        Update: {
+          class_date?: string
+          class_time?: string
+          created_at?: string | null
+          expires_at?: string
+          faculty_id?: string
+          id?: string
+          is_active?: boolean | null
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_codes_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_codes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          code: string
+          created_at: string | null
+          department: string | null
+          faculty_id: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          department?: string | null
+          faculty_id?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          department?: string | null
+          faculty_id?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          id: string
+          name: string
+          prn: string | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          id?: string
+          name: string
+          prn?: string | null
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          prn?: string | null
+          role?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

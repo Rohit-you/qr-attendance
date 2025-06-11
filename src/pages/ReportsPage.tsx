@@ -8,22 +8,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon, FileText, Printer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import AttendanceService from "@/services/AttendanceService";
-import { AttendanceRecord } from "@/types";
+import { AttendanceRecordWithDetails } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
 const ReportsPage = () => {
   const { user } = useAuth();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecordWithDetails[]>([]);
   const [isReportGenerated, setIsReportGenerated] = useState(false);
   const [subjectStats, setSubjectStats] = useState<Record<string, { total: number, students: string[] }>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  const generateReport = () => {
+  const generateReport = async () => {
     if (!startDate || !endDate) {
       toast.error("Please select both start and end dates");
       return;
@@ -34,14 +35,17 @@ const ReportsPage = () => {
       return;
     }
 
-    // Set end date to end of day for inclusive results
-    const adjustedEndDate = new Date(endDate);
-    adjustedEndDate.setHours(23, 59, 59, 999);
+    setIsLoading(true);
+    try {
+      // Set end date to end of day for inclusive results
+      const adjustedEndDate = new Date(endDate);
+      adjustedEndDate.setHours(23, 59, 59, 999);
 
-    if (user?.role === "faculty" || user?.role === "hod") {
-      const records = user.role === "hod"
-        ? AttendanceService.getAttendanceByDateRange(startDate, adjustedEndDate)
-        : AttendanceService.getFacultyAttendanceByDateRange(user.id, startDate, adjustedEndDate);
+      const records = await supabaseAttendanceService.getAttendanceByDateRange(
+        startDate, 
+        adjustedEndDate, 
+        user?.role === "faculty" ? user.id : undefined
+      );
 
       setAttendanceRecords(records);
 
@@ -49,19 +53,26 @@ const ReportsPage = () => {
       const stats: Record<string, { total: number, students: string[] }> = {};
       
       records.forEach(record => {
-        const subject = record.qrData.subject;
+        const subject = record.qr_codes?.subjects?.name || 'Unknown Subject';
+        const studentName = record.users?.name || 'Unknown Student';
+        
         if (!stats[subject]) {
           stats[subject] = { total: 0, students: [] };
         }
         stats[subject].total++;
-        if (!stats[subject].students.includes(record.studentName)) {
-          stats[subject].students.push(record.studentName);
+        if (!stats[subject].students.includes(studentName)) {
+          stats[subject].students.push(studentName);
         }
       });
 
       setSubjectStats(stats);
       setIsReportGenerated(true);
       toast.success("Report generated successfully");
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast.error("Failed to generate report");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -132,9 +143,9 @@ const ReportsPage = () => {
               </div>
             </div>
             <div className="mt-6 flex gap-2">
-              <Button onClick={generateReport}>
+              <Button onClick={generateReport} disabled={isLoading}>
                 <FileText className="mr-2 h-4 w-4" />
-                Generate Report
+                {isLoading ? "Generating..." : "Generate Report"}
               </Button>
               {isReportGenerated && (
                 <Button variant="outline" onClick={printReport}>
@@ -177,7 +188,7 @@ const ReportsPage = () => {
                   <div className="bg-muted/50 p-4 rounded-md">
                     <div className="text-sm text-muted-foreground">Total Students</div>
                     <div className="text-2xl font-bold">
-                      {new Set(attendanceRecords.map(r => r.studentId)).size}
+                      {new Set(attendanceRecords.map(r => r.student_id)).size}
                     </div>
                   </div>
                 </div>
@@ -219,6 +230,7 @@ const ReportsPage = () => {
                         <TableHead>Time</TableHead>
                         <TableHead>Subject</TableHead>
                         <TableHead>Student</TableHead>
+                        <TableHead>Marked At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -226,18 +238,21 @@ const ReportsPage = () => {
                         attendanceRecords.map((record) => (
                           <TableRow key={record.id}>
                             <TableCell>
-                              {format(new Date(record.timestamp), "PP")}
+                              {record.qr_codes?.class_date ? format(new Date(record.qr_codes.class_date), "PP") : 'N/A'}
                             </TableCell>
                             <TableCell>
-                              {format(new Date(record.timestamp), "p")}
+                              {record.qr_codes?.class_time || 'N/A'}
                             </TableCell>
-                            <TableCell>{record.qrData.subject}</TableCell>
-                            <TableCell>{record.studentName}</TableCell>
+                            <TableCell>{record.qr_codes?.subjects?.name || 'Unknown'}</TableCell>
+                            <TableCell>{record.users?.name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              {record.marked_at ? format(new Date(record.marked_at), "PPp") : 'N/A'}
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center">
+                          <TableCell colSpan={5} className="h-24 text-center">
                             No records found for the selected date range
                           </TableCell>
                         </TableRow>
