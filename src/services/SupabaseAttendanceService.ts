@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -11,8 +10,12 @@ export class SupabaseAttendanceService {
   // User management
   async getCurrentUser(): Promise<User | null> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    if (!user) {
+      console.log('No authenticated user found');
+      return null;
+    }
 
+    console.log('Fetching user profile for:', user.id);
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -21,9 +24,10 @@ export class SupabaseAttendanceService {
 
     if (error) {
       console.error('Error fetching user:', error);
-      return null;
+      throw error;
     }
 
+    console.log('User profile fetched successfully:', data);
     return data;
   }
 
@@ -35,6 +39,8 @@ export class SupabaseAttendanceService {
     prn?: string;
     department?: string;
   }): Promise<User | null> {
+    console.log('Creating user profile:', userData);
+    
     const { data, error } = await supabase
       .from('users')
       .insert([userData])
@@ -43,9 +49,10 @@ export class SupabaseAttendanceService {
 
     if (error) {
       console.error('Error creating user:', error);
-      return null;
+      throw error;
     }
 
+    console.log('User profile created successfully:', data);
     return data;
   }
 

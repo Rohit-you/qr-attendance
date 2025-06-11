@@ -43,9 +43,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from our users table
-          const userProfile = await supabaseAttendanceService.getCurrentUser();
-          setUser(userProfile);
+          try {
+            // Fetch user profile from our users table
+            const userProfile = await supabaseAttendanceService.getCurrentUser();
+            console.log('User profile fetched:', userProfile);
+            setUser(userProfile);
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            // If user doesn't exist in our users table, create a basic profile
+            if (session.user.email) {
+              console.log('Creating user profile for:', session.user.email);
+              try {
+                const newUser = await supabaseAttendanceService.createUser({
+                  id: session.user.id,
+                  email: session.user.email,
+                  name: session.user.email.split('@')[0], // Use email prefix as default name
+                  role: 'faculty' // Default to faculty role
+                });
+                console.log('Created new user profile:', newUser);
+                setUser(newUser);
+              } catch (createError) {
+                console.error('Error creating user profile:', createError);
+                setUser(null);
+              }
+            } else {
+              setUser(null);
+            }
+          }
         } else {
           setUser(null);
         }
@@ -56,11 +80,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
       setSession(session);
       if (session?.user) {
-        supabaseAttendanceService.getCurrentUser().then(setUser);
+        supabaseAttendanceService.getCurrentUser().then((userProfile) => {
+          console.log('Initial user profile:', userProfile);
+          setUser(userProfile);
+          setIsLoading(false);
+        }).catch(async (error) => {
+          console.error('Error fetching initial user profile:', error);
+          // If user doesn't exist, create one
+          if (session.user.email) {
+            try {
+              const newUser = await supabaseAttendanceService.createUser({
+                id: session.user.id,
+                email: session.user.email,
+                name: session.user.email.split('@')[0],
+                role: 'faculty'
+              });
+              setUser(newUser);
+            } catch (createError) {
+              console.error('Error creating initial user profile:', createError);
+              setUser(null);
+            }
+          }
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -81,29 +129,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     });
 
-    if (error) return { error };
+    if (error) {
+      console.error('Sign up error:', error);
+      return { error };
+    }
 
     // Create user profile in our users table
     if (data.user) {
-      await supabaseAttendanceService.createUser({
-        id: data.user.id,
-        email,
-        ...userData
-      });
+      try {
+        await supabaseAttendanceService.createUser({
+          id: data.user.id,
+          email,
+          ...userData
+        });
+        console.log('User profile created during signup');
+      } catch (createError) {
+        console.error('Error creating user profile during signup:', createError);
+      }
     }
 
     return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting sign in for:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    
+    if (error) {
+      console.error('Sign in error:', error);
+    } else {
+      console.log('Sign in successful');
+    }
+    
     return { error };
   };
 
   const signOut = async () => {
+    console.log('Signing out');
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
