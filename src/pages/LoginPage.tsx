@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +11,7 @@ import Logo from "@/components/Logo";
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { signIn, user } = useAuth();
 
   if (user) {
     navigate("/dashboard");
@@ -21,13 +20,9 @@ const LoginPage = () => {
   const handleStudentLogin = async (prn: string, name: string) => {
     try {
       console.log("Attempting student login with:", { prn, name });
-      const success = await login({ prn, name });
-      if (success) {
-        toast.success("Login successful!");
-        navigate("/dashboard");
-      } else {
-        toast.error("Login failed. Please try again.");
-      }
+      // For now, student login is not implemented with Supabase auth
+      // This would need to be implemented based on your requirements
+      toast.error("Student login not yet implemented. Please use faculty login.");
     } catch (error) {
       toast.error("Login failed. Please try again.");
     }
@@ -36,12 +31,12 @@ const LoginPage = () => {
   const handleFacultyLogin = async (email: string, password: string) => {
     try {
       console.log("Attempting faculty login with:", { email, password });
-      const success = await login({ email, password });
-      if (success) {
+      const { error } = await signIn(email, password);
+      if (!error) {
         toast.success("Login successful!");
         navigate("/dashboard");
       } else {
-        toast.error("Login failed. Please try again.");
+        toast.error("Login failed. Please check your credentials.");
       }
     } catch (error) {
       toast.error("Login failed. Please try again.");

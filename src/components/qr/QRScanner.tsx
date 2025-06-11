@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ScanLine, Camera } from "lucide-react";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
@@ -19,8 +18,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
     if (data) {
       try {
         const parsedData = parseQRCode(data);
-        onScanSuccess(parsedData);
-        setScanning(false);
+        if (parsedData) {
+          onScanSuccess(parsedData);
+          setScanning(false);
+        } else {
+          onScanError("Invalid QR code format");
+        }
       } catch (err) {
         console.error("QR parsing error:", err);
         onScanError("Invalid QR code format");
@@ -61,12 +64,14 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
     const mockQrData: QRData = {
       id: "mock-qr-id-123",
       subject: "Computer Science 101",
+      subjectId: "subject-cs101-id",
       date: new Date().toISOString().split("T")[0],
       time: "10:00",
-      facultyId: "f1",
+      facultyId: "faculty-123",
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes from now
     };
 
-    const qrString = btoa(JSON.stringify(mockQrData));
+    const qrString = JSON.stringify(mockQrData);
     handleScan(qrString);
   };
 
