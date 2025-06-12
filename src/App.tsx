@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import LoginPage from "./pages/LoginPage";
+import Index from "./pages/Index";
 import DashboardPage from "./pages/DashboardPage";
 import GenerateQRPage from "./pages/GenerateQRPage";
 import ScanQRPage from "./pages/ScanQRPage";
@@ -32,7 +32,14 @@ const ProtectedRoute = ({
   }, []);
 
   if (!isClient || isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-college-600 mx-auto mb-4"></div>
+          <p className="text-college-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -57,7 +64,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LoginPage />} />
+            <Route path="/" element={<Index />} />
             <Route 
               path="/dashboard" 
               element={
