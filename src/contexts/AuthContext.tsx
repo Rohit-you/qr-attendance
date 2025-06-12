@@ -38,108 +38,89 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     let mounted = true;
 
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth...');
+        
+        // Get current session first
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log('Initial session:', initialSession?.user?.id || 'No session');
+        
+        if (mounted) {
+          setSession(initialSession);
+          
+          if (initialSession?.user) {
+            try {
+              const userProfile = await supabaseAttendanceService.getCurrentUser();
+              console.log('User profile loaded:', userProfile?.email || 'No profile');
+              if (mounted) {
+                setUser(userProfile);
+              }
+            } catch (error) {
+              console.log('No user profile found, will create on login');
+              if (mounted) {
+                setUser(null);
+              }
+            }
+          }
+          
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('Auth state changed:', event, session?.user?.id || 'No user');
         setSession(session);
         
         if (session?.user) {
           try {
-            // Fetch user profile from our users table
             const userProfile = await supabaseAttendanceService.getCurrentUser();
-            console.log('User profile fetched:', userProfile);
+            console.log('User profile fetched after auth change:', userProfile?.email);
             if (mounted) {
               setUser(userProfile);
-              setIsLoading(false);
             }
           } catch (error) {
-            console.error('Error fetching user profile:', error);
-            // If user doesn't exist in our users table, create a basic profile
-            if (session.user.email && mounted) {
-              console.log('Creating user profile for:', session.user.email);
-              try {
-                const isStudent = session.user.email.includes('@student.college.edu');
-                const newUser = await supabaseAttendanceService.createUser({
-                  id: session.user.id,
-                  email: session.user.email,
-                  name: isStudent ? session.user.email.split('@')[0] : session.user.email.split('@')[0],
-                  role: isStudent ? 'student' : 'faculty',
-                  prn: isStudent ? session.user.email.split('@')[0] : undefined
-                });
-                console.log('Created new user profile:', newUser);
-                if (mounted) {
-                  setUser(newUser);
-                  setIsLoading(false);
-                }
-              } catch (createError) {
-                console.error('Error creating user profile:', createError);
-                if (mounted) {
-                  setUser(null);
-                  setIsLoading(false);
-                }
+            console.log('Creating user profile after auth change...');
+            try {
+              const isStudent = session.user.email?.includes('@student.college.edu');
+              const newUser = await supabaseAttendanceService.createUser({
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.email?.split('@')[0] || 'User',
+                role: isStudent ? 'student' : 'faculty',
+                prn: isStudent ? session.user.email?.split('@')[0] : undefined
+              });
+              console.log('Created new user profile:', newUser?.email);
+              if (mounted) {
+                setUser(newUser);
               }
-            } else if (mounted) {
-              setUser(null);
-              setIsLoading(false);
+            } catch (createError) {
+              console.error('Error creating user profile:', createError);
+              if (mounted) {
+                setUser(null);
+              }
             }
           }
         } else {
           if (mounted) {
             setUser(null);
-            setIsLoading(false);
           }
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
-      console.log('Initial session check:', session?.user?.id);
-      setSession(session);
-      if (session?.user) {
-        supabaseAttendanceService.getCurrentUser().then((userProfile) => {
-          if (!mounted) return;
-          console.log('Initial user profile:', userProfile);
-          setUser(userProfile);
-          setIsLoading(false);
-        }).catch(async (error) => {
-          if (!mounted) return;
-          console.error('Error fetching initial user profile:', error);
-          // If user doesn't exist, create one
-          if (session.user.email) {
-            try {
-              const isStudent = session.user.email.includes('@student.college.edu');
-              const newUser = await supabaseAttendanceService.createUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: isStudent ? session.user.email.split('@')[0] : session.user.email.split('@')[0],
-                role: isStudent ? 'student' : 'faculty',
-                prn: isStudent ? session.user.email.split('@')[0] : undefined
-              });
-              if (mounted) {
-                setUser(newUser);
-                setIsLoading(false);
-              }
-            } catch (createError) {
-              console.error('Error creating initial user profile:', createError);
-              if (mounted) {
-                setUser(null);
-                setIsLoading(false);
-              }
-            }
-          } else if (mounted) {
-            setIsLoading(false);
-          }
-        });
-      } else if (mounted) {
-        setIsLoading(false);
-      }
-    });
+    // Initialize auth
+    initializeAuth();
 
     return () => {
       mounted = false;
@@ -167,7 +148,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return { error };
     }
 
-    // Create user profile in our users table
     if (data.user) {
       try {
         await supabaseAttendanceService.createUser({
