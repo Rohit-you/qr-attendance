@@ -36,9 +36,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         
@@ -47,71 +51,100 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             // Fetch user profile from our users table
             const userProfile = await supabaseAttendanceService.getCurrentUser();
             console.log('User profile fetched:', userProfile);
-            setUser(userProfile);
+            if (mounted) {
+              setUser(userProfile);
+              setIsLoading(false);
+            }
           } catch (error) {
             console.error('Error fetching user profile:', error);
             // If user doesn't exist in our users table, create a basic profile
-            if (session.user.email) {
+            if (session.user.email && mounted) {
               console.log('Creating user profile for:', session.user.email);
               try {
+                const isStudent = session.user.email.includes('@student.college.edu');
                 const newUser = await supabaseAttendanceService.createUser({
                   id: session.user.id,
                   email: session.user.email,
-                  name: session.user.email.split('@')[0], // Use email prefix as default name
-                  role: 'faculty' // Default to faculty role
+                  name: isStudent ? session.user.email.split('@')[0] : session.user.email.split('@')[0],
+                  role: isStudent ? 'student' : 'faculty',
+                  prn: isStudent ? session.user.email.split('@')[0] : undefined
                 });
                 console.log('Created new user profile:', newUser);
-                setUser(newUser);
+                if (mounted) {
+                  setUser(newUser);
+                  setIsLoading(false);
+                }
               } catch (createError) {
                 console.error('Error creating user profile:', createError);
-                setUser(null);
+                if (mounted) {
+                  setUser(null);
+                  setIsLoading(false);
+                }
               }
-            } else {
+            } else if (mounted) {
               setUser(null);
+              setIsLoading(false);
             }
           }
         } else {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+            setIsLoading(false);
+          }
         }
-        
-        setIsLoading(false);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       console.log('Initial session check:', session?.user?.id);
       setSession(session);
       if (session?.user) {
         supabaseAttendanceService.getCurrentUser().then((userProfile) => {
+          if (!mounted) return;
           console.log('Initial user profile:', userProfile);
           setUser(userProfile);
           setIsLoading(false);
         }).catch(async (error) => {
+          if (!mounted) return;
           console.error('Error fetching initial user profile:', error);
           // If user doesn't exist, create one
           if (session.user.email) {
             try {
+              const isStudent = session.user.email.includes('@student.college.edu');
               const newUser = await supabaseAttendanceService.createUser({
                 id: session.user.id,
                 email: session.user.email,
-                name: session.user.email.split('@')[0],
-                role: 'faculty'
+                name: isStudent ? session.user.email.split('@')[0] : session.user.email.split('@')[0],
+                role: isStudent ? 'student' : 'faculty',
+                prn: isStudent ? session.user.email.split('@')[0] : undefined
               });
-              setUser(newUser);
+              if (mounted) {
+                setUser(newUser);
+                setIsLoading(false);
+              }
             } catch (createError) {
               console.error('Error creating initial user profile:', createError);
-              setUser(null);
+              if (mounted) {
+                setUser(null);
+                setIsLoading(false);
+              }
             }
+          } else if (mounted) {
+            setIsLoading(false);
           }
-          setIsLoading(false);
         });
-      } else {
+      } else if (mounted) {
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (

@@ -8,24 +8,39 @@ import { toast } from "sonner";
 import StudentLoginForm from "@/components/StudentLoginForm";
 import FacultyLoginForm from "@/components/FacultyLoginForm";
 import Logo from "@/components/Logo";
+import { useEffect } from "react";
 
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, isLoading } = useAuth();
 
-  if (user) {
-    navigate("/dashboard");
-  }
+  useEffect(() => {
+    if (user && !isLoading) {
+      console.log("User logged in, redirecting to dashboard:", user);
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, isLoading, navigate]);
 
   const handleStudentLogin = async (prn: string, name: string) => {
     try {
       console.log("Attempting student login with:", { prn, name });
-      // For now, student login is not implemented with Supabase auth
-      // This would need to be implemented based on your requirements
-      toast.error("Student login not yet implemented. Please use faculty login.");
+      
+      // For student login, we'll use a mock email format
+      const studentEmail = `${prn}@student.college.edu`;
+      const studentPassword = prn; // Use PRN as password for simplicity
+      
+      const { error } = await signIn(studentEmail, studentPassword);
+      if (!error) {
+        toast.success("Student login successful!");
+        console.log("Student login successful, should redirect to dashboard");
+      } else {
+        console.error("Student login error:", error);
+        toast.error("Student login failed. Please check your PRN and name.");
+      }
     } catch (error) {
-      toast.error("Login failed. Please try again.");
+      console.error("Student login error:", error);
+      toast.error("Student login failed. Please try again.");
     }
   };
 
@@ -34,15 +49,29 @@ const LoginPage = () => {
       console.log("Attempting faculty login with:", { email, password });
       const { error } = await signIn(email, password);
       if (!error) {
-        toast.success("Login successful!");
-        navigate("/dashboard");
+        toast.success("Faculty login successful!");
+        console.log("Faculty login successful, should redirect to dashboard");
       } else {
+        console.error("Faculty login error:", error);
         toast.error("Login failed. Please check your credentials.");
       }
     } catch (error) {
+      console.error("Faculty login error:", error);
       toast.error("Login failed. Please try again.");
     }
   };
+
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-college-600 mx-auto mb-4"></div>
+          <p className="text-college-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-college-50 to-college-100 p-4">
@@ -70,9 +99,19 @@ const LoginPage = () => {
             </TabsList>
             <TabsContent value="student">
               <StudentLoginForm onSubmit={handleStudentLogin} />
+              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                <p className="text-sm text-blue-700 font-medium">Test Student Login:</p>
+                <p className="text-xs text-blue-600">PRN: 1234567890123</p>
+                <p className="text-xs text-blue-600">Name: John Doe</p>
+              </div>
             </TabsContent>
             <TabsContent value="faculty">
               <FacultyLoginForm onSubmit={handleFacultyLogin} />
+              <div className="mt-4 p-3 bg-green-50 rounded-md">
+                <p className="text-sm text-green-700 font-medium">Test Faculty Login:</p>
+                <p className="text-xs text-green-600">Email: faculty@college.edu</p>
+                <p className="text-xs text-green-600">Password: faculty123</p>
+              </div>
             </TabsContent>
           </Tabs>
         </Card>
