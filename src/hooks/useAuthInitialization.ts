@@ -46,6 +46,7 @@ export const useAuthInitialization = () => {
       try {
         console.log('Initializing auth...');
         
+        // Get initial session
         const initialSession = await authService.getCurrentSession();
         console.log('Initial session:', initialSession?.user?.id || 'No session');
         
@@ -59,6 +60,7 @@ export const useAuthInitialization = () => {
             }
           }
           
+          // Set loading to false after initial check
           setIsLoading(false);
         }
       } catch (error) {
@@ -69,6 +71,7 @@ export const useAuthInitialization = () => {
       }
     };
 
+    // Set up auth state change listener
     const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -77,18 +80,23 @@ export const useAuthInitialization = () => {
         setSession(session);
         
         if (session?.user) {
-          let userProfile = await fetchUserProfile(session.user.id);
-          
-          if (!userProfile) {
-            console.log('Creating user profile after auth change...');
-            userProfile = await createUserProfile(session);
-          } else {
-            console.log('User profile fetched after auth change:', userProfile?.email);
-          }
-          
-          if (mounted) {
-            setUser(userProfile);
-          }
+          // Use setTimeout to prevent potential deadlocks
+          setTimeout(async () => {
+            if (!mounted) return;
+            
+            let userProfile = await fetchUserProfile(session.user.id);
+            
+            if (!userProfile) {
+              console.log('Creating user profile after auth change...');
+              userProfile = await createUserProfile(session);
+            } else {
+              console.log('User profile fetched after auth change:', userProfile?.email);
+            }
+            
+            if (mounted) {
+              setUser(userProfile);
+            }
+          }, 0);
         } else {
           if (mounted) {
             setUser(null);
@@ -97,6 +105,7 @@ export const useAuthInitialization = () => {
       }
     );
 
+    // Initialize auth
     initializeAuth();
 
     return () => {
