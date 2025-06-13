@@ -4,15 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CustomButton from "@/components/CustomButton";
 import SubjectSelector from "./SubjectSelector";
-import { Subject } from "@/types";
 
 interface QRGeneratorFormProps {
-  subjects: Subject[];
   onGenerateQR: (selectedSubjectId: string, date: string, time: string) => void;
   isLoading: boolean;
 }
 
-const QRGeneratorForm = ({ subjects, onGenerateQR, isLoading }: QRGeneratorFormProps) => {
+const QRGeneratorForm = ({ onGenerateQR, isLoading }: QRGeneratorFormProps) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("");
@@ -29,7 +27,6 @@ const QRGeneratorForm = ({ subjects, onGenerateQR, isLoading }: QRGeneratorFormP
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <SubjectSelector
-        subjects={subjects}
         selectedSubjectId={selectedSubjectId}
         onSubjectSelect={handleSubjectSelect}
       />
