@@ -16,6 +16,9 @@ const GenerateQRPage = () => {
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [subjectQuery, setSubjectQuery] = useState("");
+  const [filteredSubjects, setFilteredSubjects] = useState<Subject[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -28,9 +31,40 @@ const GenerateQRPage = () => {
     loadSubjects();
   }, []);
 
+  useEffect(() => {
+    if (subjectQuery.trim() === "") {
+      setFilteredSubjects([]);
+      setSelectedSubjectId("");
+      return;
+    }
+
+    const filtered = subjects.filter(subject =>
+      subject.name.toLowerCase().includes(subjectQuery.toLowerCase()) ||
+      subject.code.toLowerCase().includes(subjectQuery.toLowerCase())
+    );
+    setFilteredSubjects(filtered);
+  }, [subjectQuery, subjects]);
+
   const loadSubjects = async () => {
     const fetchedSubjects = await supabaseAttendanceService.getSubjects();
     setSubjects(fetchedSubjects);
+  };
+
+  const handleSubjectSelect = (subject: Subject) => {
+    setSelectedSubjectId(subject.id);
+    setSubjectQuery(`${subject.name} (${subject.code})`);
+    setShowSuggestions(false);
+    setFilteredSubjects([]);
+  };
+
+  const handleSubjectInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSubjectQuery(value);
+    setShowSuggestions(true);
+    
+    if (value.trim() === "") {
+      setSelectedSubjectId("");
+    }
   };
 
   const handleGenerateQR = async () => {
@@ -94,6 +128,9 @@ const GenerateQRPage = () => {
 
   const handleResetForm = () => {
     setSelectedSubjectId("");
+    setSubjectQuery("");
+    setFilteredSubjects([]);
+    setShowSuggestions(false);
     setDate(new Date().toISOString().split("T")[0]);
     setTime("");
     setGeneratedQR(null);
@@ -106,22 +143,43 @@ const GenerateQRPage = () => {
         <Card>
           <CardContent className="pt-6">
             <form className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="subject">Subject</Label>
-                <select
+                <Input
                   id="subject"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={selectedSubjectId}
-                  onChange={(e) => setSelectedSubjectId(e.target.value)}
+                  type="text"
+                  placeholder="Type to search subjects..."
+                  value={subjectQuery}
+                  onChange={handleSubjectInputChange}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => {
+                    // Delay hiding suggestions to allow for clicks
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
                   required
-                >
-                  <option value="">Select a subject</option>
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name} ({subject.code})
-                    </option>
-                  ))}
-                </select>
+                />
+                
+                {showSuggestions && filteredSubjects.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredSubjects.map((subject) => (
+                      <button
+                        key={subject.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground outline-none"
+                        onClick={() => handleSubjectSelect(subject)}
+                      >
+                        <div className="font-medium">{subject.name}</div>
+                        <div className="text-sm text-muted-foreground">{subject.code}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {showSuggestions && subjectQuery.trim() !== "" && filteredSubjects.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 bg-background border border-input rounded-md shadow-lg p-3">
+                    <div className="text-sm text-muted-foreground">No subjects found</div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
