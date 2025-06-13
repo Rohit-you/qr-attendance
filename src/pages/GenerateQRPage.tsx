@@ -43,7 +43,24 @@ const GenerateQRPage = () => {
       subject.code.toLowerCase().includes(subjectQuery.toLowerCase())
     );
     setFilteredSubjects(filtered);
-  }, [subjectQuery, subjects]);
+
+    // Check if the typed query exactly matches a subject
+    const exactMatch = subjects.find(subject => 
+      (subject.name.toLowerCase() === subjectQuery.toLowerCase()) ||
+      (subject.code.toLowerCase() === subjectQuery.toLowerCase()) ||
+      (`${subject.name} (${subject.code})`.toLowerCase() === subjectQuery.toLowerCase())
+    );
+    
+    if (exactMatch) {
+      setSelectedSubjectId(exactMatch.id);
+    } else {
+      // Check if current query matches the display format of selected subject
+      const currentSubject = subjects.find(s => s.id === selectedSubjectId);
+      if (currentSubject && subjectQuery !== `${currentSubject.name} (${currentSubject.code})`) {
+        setSelectedSubjectId("");
+      }
+    }
+  }, [subjectQuery, subjects, selectedSubjectId]);
 
   const loadSubjects = async () => {
     const fetchedSubjects = await supabaseAttendanceService.getSubjects();
@@ -61,15 +78,35 @@ const GenerateQRPage = () => {
     const value = e.target.value;
     setSubjectQuery(value);
     setShowSuggestions(true);
-    
-    if (value.trim() === "") {
-      setSelectedSubjectId("");
-    }
   };
 
   const handleGenerateQR = async () => {
-    if (!selectedSubjectId || !date || !time) {
+    console.log("Generate QR clicked");
+    console.log("Selected Subject ID:", selectedSubjectId);
+    console.log("Date:", date);
+    console.log("Time:", time);
+    console.log("Subject Query:", subjectQuery);
+
+    // Check if subject is selected (either by ID or by exact match)
+    let finalSubjectId = selectedSubjectId;
+    
+    if (!finalSubjectId && subjectQuery.trim()) {
+      // Try to find exact match if ID is not set
+      const exactMatch = subjects.find(subject => 
+        (subject.name.toLowerCase() === subjectQuery.toLowerCase()) ||
+        (subject.code.toLowerCase() === subjectQuery.toLowerCase()) ||
+        (`${subject.name} (${subject.code})`.toLowerCase() === subjectQuery.toLowerCase())
+      );
+      
+      if (exactMatch) {
+        finalSubjectId = exactMatch.id;
+        setSelectedSubjectId(exactMatch.id);
+      }
+    }
+
+    if (!finalSubjectId || !date || !time) {
       toast.error("Please fill all fields");
+      console.log("Validation failed:", { finalSubjectId, date, time });
       return;
     }
 
@@ -80,7 +117,7 @@ const GenerateQRPage = () => {
 
     setIsLoading(true);
     try {
-      const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
+      const selectedSubject = subjects.find(s => s.id === finalSubjectId);
       if (!selectedSubject) {
         toast.error("Subject not found");
         return;
@@ -90,9 +127,17 @@ const GenerateQRPage = () => {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 2);
 
+      console.log("Creating QR code with data:", {
+        subject_id: finalSubjectId,
+        faculty_id: user.id,
+        class_date: date,
+        class_time: time,
+        expires_at: expiresAt.toISOString()
+      });
+
       // Create QR code in database
       const qrCode = await supabaseAttendanceService.createQRCode({
-        subject_id: selectedSubjectId,
+        subject_id: finalSubjectId,
         faculty_id: user.id,
         class_date: date,
         class_time: time,
@@ -107,7 +152,7 @@ const GenerateQRPage = () => {
       const qrDataObj: QRData = {
         id: qrCode.id,
         subject: selectedSubject.name,
-        subjectId: selectedSubjectId,
+        subjectId: finalSubjectId,
         date,
         time,
         facultyId: user.id,
