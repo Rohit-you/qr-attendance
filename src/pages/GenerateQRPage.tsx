@@ -51,8 +51,11 @@ const GenerateQRPage = () => {
       const selectedSubject = predefinedSubjects.find(s => s.id === selectedSubjectId);
       if (!selectedSubject) {
         toast.error("Subject not found");
+        console.log("Subject not found for ID:", selectedSubjectId);
         return;
       }
+
+      console.log("Found subject:", selectedSubject);
 
       // Set expiration to 2 hours from now
       const expiresAt = new Date();

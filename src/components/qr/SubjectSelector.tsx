@@ -21,6 +21,8 @@ const predefinedSubjects = [
 ];
 
 const SubjectSelector = ({ selectedSubjectId, onSubjectSelect }: SubjectSelectorProps) => {
+  console.log("Current selected subject ID in selector:", selectedSubjectId);
+  
   return (
     <div className="space-y-2">
       <Label htmlFor="subject">Subject</Label>
