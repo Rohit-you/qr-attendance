@@ -8,16 +8,16 @@ interface SubjectSelectorProps {
 }
 
 const predefinedSubjects = [
-  { id: "dbms", name: "DBMS", code: "DBMS" },
-  { id: "dsa", name: "DSA", code: "DSA" },
-  { id: "cao", name: "CAO", code: "CAO" },
-  { id: "dldm", name: "DLDM", code: "DLDM" },
-  { id: "daa", name: "DAA", code: "DAA" },
-  { id: "math1", name: "Math 1", code: "MATH1" },
-  { id: "math2", name: "Math 2", code: "MATH2" },
-  { id: "math3", name: "Math 3", code: "MATH3" },
-  { id: "ml", name: "ML", code: "ML" },
-  { id: "sql", name: "SQL", code: "SQL" },
+  { id: "550e8400-e29b-41d4-a716-446655440001", name: "DBMS", code: "DBMS" },
+  { id: "550e8400-e29b-41d4-a716-446655440002", name: "DSA", code: "DSA" },
+  { id: "550e8400-e29b-41d4-a716-446655440003", name: "CAO", code: "CAO" },
+  { id: "550e8400-e29b-41d4-a716-446655440004", name: "DLDM", code: "DLDM" },
+  { id: "550e8400-e29b-41d4-a716-446655440005", name: "DAA", code: "DAA" },
+  { id: "550e8400-e29b-41d4-a716-446655440006", name: "Math 1", code: "MATH1" },
+  { id: "550e8400-e29b-41d4-a716-446655440007", name: "Math 2", code: "MATH2" },
+  { id: "550e8400-e29b-41d4-a716-446655440008", name: "Math 3", code: "MATH3" },
+  { id: "550e8400-e29b-41d4-a716-446655440009", name: "ML", code: "ML" },
+  { id: "550e8400-e29b-41d4-a716-446655440010", name: "SQL", code: "SQL" },
 ];
 
 const SubjectSelector = ({ selectedSubjectId, onSubjectSelect }: SubjectSelectorProps) => {
