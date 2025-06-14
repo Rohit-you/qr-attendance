@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,9 +25,11 @@ const LoginPage = () => {
     try {
       console.log("Attempting student login with:", { prn, name });
       
-      // For student login, we'll use a mock email format
-      const studentEmail = `${prn}@student.college.edu`;
+      // Create a valid email format using student prefix
+      const studentEmail = `student${prn}@college.edu`;
       const studentPassword = prn; // Use PRN as password for simplicity
+      
+      console.log("Using email format:", studentEmail);
       
       // First try to sign in
       let { error } = await signIn(studentEmail, studentPassword);
