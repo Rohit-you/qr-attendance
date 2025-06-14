@@ -13,7 +13,7 @@ import { useEffect } from "react";
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
   const navigate = useNavigate();
-  const { signIn, user, isLoading } = useAuth();
+  const { signIn, signUp, user, isLoading } = useAuth();
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -30,8 +30,35 @@ const LoginPage = () => {
       const studentEmail = `${prn}@student.college.edu`;
       const studentPassword = prn; // Use PRN as password for simplicity
       
-      const { error } = await signIn(studentEmail, studentPassword);
-      if (!error) {
+      // First try to sign in
+      let { error } = await signIn(studentEmail, studentPassword);
+      
+      if (error && error.message === "Invalid login credentials") {
+        console.log("Student not found, creating new account...");
+        // If login fails, try to create the student account
+        const signUpResult = await signUp(studentEmail, studentPassword, {
+          name: name,
+          role: 'student',
+          prn: prn
+        });
+        
+        if (signUpResult.error) {
+          console.error("Student signup error:", signUpResult.error);
+          toast.error("Failed to create student account. Please try again.");
+          return;
+        }
+        
+        // After successful signup, try to sign in again
+        const signInResult = await signIn(studentEmail, studentPassword);
+        if (signInResult.error) {
+          console.error("Student login after signup error:", signInResult.error);
+          toast.error("Account created but login failed. Please try logging in again.");
+          return;
+        }
+        
+        toast.success("Student account created and logged in successfully!");
+        console.log("Student account created and login successful");
+      } else if (!error) {
         toast.success("Student login successful!");
         console.log("Student login successful, should redirect to dashboard");
       } else {
@@ -103,6 +130,7 @@ const LoginPage = () => {
                 <p className="text-sm text-blue-700 font-medium">Test Student Login:</p>
                 <p className="text-xs text-blue-600">PRN: 1234567890123</p>
                 <p className="text-xs text-blue-600">Name: John Doe</p>
+                <p className="text-xs text-blue-500 mt-1">Note: Student accounts are created automatically on first login</p>
               </div>
             </TabsContent>
             <TabsContent value="faculty">
