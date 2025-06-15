@@ -125,11 +125,7 @@ const LoginPage = () => {
             </TabsContent>
             <TabsContent value="faculty">
               <FacultyLoginForm onSubmit={handleFacultyLogin} />
-              <div className="mt-4 p-3 bg-green-50 rounded-md">
-                <p className="text-sm text-green-700 font-medium">Test Faculty Login:</p>
-                <p className="text-xs text-green-600">Email: faculty@college.edu</p>
-                <p className="text-xs text-green-600">Password: faculty123</p>
-              </div>
+              
             </TabsContent>
           </Tabs>
         </Card>
