@@ -74,7 +74,10 @@ const GenerateQRPage = () => {
         <Card>
           <CardContent className="pt-6">
             {!qrData || !qrString ? (
-              <QRGeneratorForm onGenerate={handleGenerate} loading={loading} />
+              <QRGeneratorForm
+                onGenerateQR={handleGenerate}
+                isLoading={loading}
+              />
             ) : (
               <QRCodeDisplay
                 qrString={qrString}
