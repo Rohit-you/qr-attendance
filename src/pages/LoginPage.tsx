@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,33 +14,36 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, signUp, user, isLoading } = useAuth();
 
+  // Redirect authenticated users away from login page
   useEffect(() => {
     if (user && !isLoading) {
-      console.log("User logged in, redirecting to dashboard:", user);
       navigate("/dashboard", { replace: true });
     }
   }, [user, isLoading, navigate]);
 
+  // If user is authenticated, never render the login page UI
+  if (user && !isLoading) {
+    return null;
+  }
+
   const handleStudentLogin = async (prn: string, name: string) => {
     try {
       console.log("Attempting student login with:", { prn, name });
-      
       const studentEmail = `student${prn}@college.edu`;
       const studentPassword = prn;
-      
       console.log("Using email format for student:", studentEmail);
-      
+
       let { error } = await signIn(studentEmail, studentPassword);
-      
+
       if (error && error.message === "Invalid login credentials") {
         console.log("Student not found, proceeding to create a new account.");
-        
+
         const signUpResult = await signUp(studentEmail, studentPassword, {
           name: name,
           role: 'student',
           prn: prn
         });
-        
+
         if (signUpResult.error) {
           if (signUpResult.error.message.includes("User already registered")) {
             toast.info("This account already exists. Please check your email to verify your account before logging in.");
@@ -49,10 +53,9 @@ const LoginPage = () => {
           }
           return;
         }
-        
+
         toast.success("Account created! Please check your email to verify your account, then you can log in.");
         console.log("Student account created. Awaiting email verification.");
-
       } else if (!error) {
         toast.success("Student login successful!");
         console.log("Student login successful, redirecting to dashboard...");
