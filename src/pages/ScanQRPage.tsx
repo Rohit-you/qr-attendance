@@ -37,6 +37,13 @@ const ScanQRPage = () => {
       return;
     }
 
+    // Prevent mock/demo scans from attempting real DB checks
+    if (scannedData.id === "mock-qr-id-123") {
+      toast.error("This is a demo QR scan and cannot mark attendance in the database.");
+      setError("Demo mode: Attendance cannot be marked with mock QR codes.");
+      return;
+    }
+
     try {
       // Fetch QR code from DB and log the ID
       console.log("[ScanQRPage] Checking QR code with id:", scannedData.id);
