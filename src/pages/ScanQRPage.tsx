@@ -6,11 +6,9 @@ import { QRData } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useCapacitorDetection } from "@/hooks/useCapacitorDetection";
 import QRScanner from "@/components/qr/QRScanner";
 import QRDataDisplay from "@/components/qr/QRDataDisplay";
 import SuccessDisplay from "@/components/qr/SuccessDisplay";
-import { parseQRCode } from "@/services/QRCodeService";
 import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
 const ScanQRPage = () => {
@@ -18,7 +16,6 @@ const ScanQRPage = () => {
   const [scannedData, setScannedData] = useState<QRData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
-  const isMobile = useCapacitorDetection();
 
   const handleScanSuccess = (data: QRData) => {
     setScannedData(data);
@@ -28,6 +25,7 @@ const ScanQRPage = () => {
 
   const handleScanError = (errorMessage: string) => {
     setError(errorMessage);
+    toast.error(errorMessage);
     console.warn("[ScanQRPage] Scan error:", errorMessage);
   };
 
@@ -37,15 +35,7 @@ const ScanQRPage = () => {
       return;
     }
 
-    // Prevent mock/demo scans from attempting real DB checks
-    if (scannedData.id === "mock-qr-id-123") {
-      toast.error("This is a demo QR scan and cannot mark attendance in the database.");
-      setError("Demo mode: Attendance cannot be marked with mock QR codes.");
-      return;
-    }
-
     try {
-      // Fetch QR code from DB and log the ID
       console.log("[ScanQRPage] Checking QR code with id:", scannedData.id);
       const qrCode = await supabaseAttendanceService.getQRCode(scannedData.id);
 
@@ -57,7 +47,6 @@ const ScanQRPage = () => {
         return;
       }
 
-      // Mark attendance and log info
       await supabaseAttendanceService.markAttendance({
         student_id: user.id,
         qr_code_id: scannedData.id,
@@ -119,7 +108,6 @@ const ScanQRPage = () => {
               <QRScanner
                 onScanSuccess={handleScanSuccess}
                 onScanError={handleScanError}
-                isMobile={isMobile}
               />
             )}
           </CardContent>
@@ -130,4 +118,3 @@ const ScanQRPage = () => {
 };
 
 export default ScanQRPage;
-
