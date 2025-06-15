@@ -56,6 +56,29 @@ export class SupabaseAttendanceService {
     return data;
   }
 
+  async updateUser(
+    id: string,
+    patch: Partial<{
+      name: string;
+      role: 'student' | 'faculty' | 'hod';
+      prn?: string;
+      department?: string;
+    }>
+  ): Promise<{ data: User | null; error: any }> {
+    const { data, error } = await supabase
+      .from('users')
+      .update(patch)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating user:', error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  }
+
   // Subject management
   async getSubjects(): Promise<Subject[]> {
     const { data, error } = await supabase

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { User } from '@/types/auth';
@@ -21,9 +20,44 @@ export const useAuthInitialization = () => {
     }
   };
 
+  // Helper: for students, update role/prn if record is incorrect
+  const maybeFixStudentProfile = async (userProfile: User | null, session: Session) => {
+    if (!userProfile) return null;
+    const email = session.user.email!;
+    const isStudent =
+      email.startsWith('student') && email.endsWith('@college.edu');
+    if (!isStudent) return userProfile;
+
+    const prn = email.replace('student', '').split('@')[0];
+    // Only update if role/prn are wrong or missing
+    if (
+      userProfile.role !== 'student' ||
+      userProfile.prn !== prn
+    ) {
+      try {
+        console.log(
+          `Fixing student profile for ${email}: role=${userProfile.role}=>student, prn=${userProfile.prn}=>${prn}`
+        );
+        // Small patch: update role/prn only, keep other fields as is.
+        // (If department will be used, you can add it as well.)
+        const { data, error } = await supabaseAttendanceService.updateUser(userProfile.id, {
+          role: 'student',
+          prn,
+        });
+        if (!error && data) {
+          return data;
+        } else {
+          console.error("Failed to patch student profile", error);
+        }
+      } catch (err) {
+        console.error("Error patching student profile", err);
+      }
+    }
+    return userProfile;
+  };
+
   const createUserProfile = async (session: Session) => {
     try {
-      // ---- FIX HERE: new student detection ----
       const isStudent =
         session.user.email?.startsWith('student') &&
         session.user.email?.endsWith('@college.edu');
@@ -57,7 +91,10 @@ export const useAuthInitialization = () => {
           setSession(initialSession);
           
           if (initialSession?.user) {
-            const userProfile = await fetchUserProfile(initialSession.user.id);
+            let userProfile = await fetchUserProfile(initialSession.user.id);
+            // ----- FIX: Patch wrong existing student records -----
+            userProfile = await maybeFixStudentProfile(userProfile, initialSession);
+
             if (mounted) {
               setUser(userProfile);
             }
@@ -88,7 +125,10 @@ export const useAuthInitialization = () => {
             if (!mounted) return;
             
             let userProfile = await fetchUserProfile(session.user.id);
-            
+
+            // ----- FIX: Patch wrong existing student records -----
+            userProfile = await maybeFixStudentProfile(userProfile, session);
+
             if (!userProfile) {
               console.log('Creating user profile after auth change...');
               userProfile = await createUserProfile(session);
