@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import StudentLoginForm from "@/components/StudentLoginForm";
 import FacultyLoginForm from "@/components/FacultyLoginForm";
 import Logo from "@/components/Logo";
+
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
   const navigate = useNavigate();
@@ -17,9 +19,15 @@ const LoginPage = () => {
     isLoading
   } = useAuth();
 
+  // --- DEBUGGING LOGS: SHOW AUTH STATE ---
+  useEffect(() => {
+    console.log("LoginPage mount: user =", user, "isLoading=", isLoading);
+  }, [user, isLoading]);
+
   // Redirect authenticated users away from login page
   useEffect(() => {
     if (user && !isLoading) {
+      console.log("User authenticated, redirecting to /dashboard", user);
       navigate("/dashboard", {
         replace: true
       });
@@ -27,9 +35,18 @@ const LoginPage = () => {
   }, [user, isLoading, navigate]);
 
   // If user is authenticated, never render the login page UI
-  if (user && !isLoading) {
-    return null;
+  if ((user && !isLoading) || isLoading) {
+    // Show loading spinner if loading, or nothing if user is already logged in (redirect will happen)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-college-600 mx-auto mb-4"></div>
+          <p className="text-college-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
+
   const handleStudentLogin = async (prn: string, name: string) => {
     try {
       console.log("Attempting student login with:", {
@@ -63,6 +80,7 @@ const LoginPage = () => {
       } else if (!error) {
         toast.success("Student login successful!");
         console.log("Student login successful, redirecting to dashboard...");
+        // navigation will be triggered by useEffect on user update
       } else {
         console.error("An unexpected student login error occurred:", error);
         toast.error("Student login failed. Please check your details and try again.");
@@ -72,6 +90,7 @@ const LoginPage = () => {
       toast.error("An unexpected error occurred. Please try again.");
     }
   };
+
   const handleFacultyLogin = async (email: string, password: string) => {
     try {
       console.log("Attempting faculty login with:", {
@@ -84,6 +103,7 @@ const LoginPage = () => {
       if (!error) {
         toast.success("Faculty login successful!");
         console.log("Faculty login successful, should redirect to dashboard");
+        // navigation will be triggered by useEffect on user update
       } else {
         console.error("Faculty login error:", error);
         toast.error("Login failed. Please check your credentials.");
@@ -93,15 +113,10 @@ const LoginPage = () => {
       toast.error("Login failed. Please try again.");
     }
   };
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-college-600 mx-auto mb-4"></div>
-          <p className="text-college-600">Loading...</p>
-        </div>
-      </div>;
-  }
-  return <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-college-50 to-college-100 p-4">
+
+  // Render login UI (student as default tab)
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-college-50 to-college-100 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center gap-2">
           <Logo />
@@ -121,11 +136,9 @@ const LoginPage = () => {
             </TabsList>
             <TabsContent value="student">
               <StudentLoginForm onSubmit={handleStudentLogin} />
-              
             </TabsContent>
             <TabsContent value="faculty">
               <FacultyLoginForm onSubmit={handleFacultyLogin} />
-              
             </TabsContent>
           </Tabs>
         </Card>
@@ -134,6 +147,7 @@ const LoginPage = () => {
           © {new Date().getFullYear()} CampusQR Attendance System
         </p>
       </div>
-    </div>;
+    </div>
+  );
 };
 export default LoginPage;
