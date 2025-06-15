@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,16 +7,22 @@ import { toast } from "sonner";
 import StudentLoginForm from "@/components/StudentLoginForm";
 import FacultyLoginForm from "@/components/FacultyLoginForm";
 import Logo from "@/components/Logo";
-
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
   const navigate = useNavigate();
-  const { signIn, signUp, user, isLoading } = useAuth();
+  const {
+    signIn,
+    signUp,
+    user,
+    isLoading
+  } = useAuth();
 
   // Redirect authenticated users away from login page
   useEffect(() => {
     if (user && !isLoading) {
-      navigate("/dashboard", { replace: true });
+      navigate("/dashboard", {
+        replace: true
+      });
     }
   }, [user, isLoading, navigate]);
 
@@ -25,25 +30,25 @@ const LoginPage = () => {
   if (user && !isLoading) {
     return null;
   }
-
   const handleStudentLogin = async (prn: string, name: string) => {
     try {
-      console.log("Attempting student login with:", { prn, name });
+      console.log("Attempting student login with:", {
+        prn,
+        name
+      });
       const studentEmail = `student${prn}@college.edu`;
       const studentPassword = prn;
       console.log("Using email format for student:", studentEmail);
-
-      let { error } = await signIn(studentEmail, studentPassword);
-
+      let {
+        error
+      } = await signIn(studentEmail, studentPassword);
       if (error && error.message === "Invalid login credentials") {
         console.log("Student not found, proceeding to create a new account.");
-
         const signUpResult = await signUp(studentEmail, studentPassword, {
           name: name,
           role: 'student',
           prn: prn
         });
-
         if (signUpResult.error) {
           if (signUpResult.error.message.includes("User already registered")) {
             toast.info("This account already exists. Please check your email to verify your account before logging in.");
@@ -53,7 +58,6 @@ const LoginPage = () => {
           }
           return;
         }
-
         toast.success("Account created! Please check your email to verify your account, then you can log in.");
         console.log("Student account created. Awaiting email verification.");
       } else if (!error) {
@@ -68,11 +72,15 @@ const LoginPage = () => {
       toast.error("An unexpected error occurred. Please try again.");
     }
   };
-
   const handleFacultyLogin = async (email: string, password: string) => {
     try {
-      console.log("Attempting faculty login with:", { email, password });
-      const { error } = await signIn(email, password);
+      console.log("Attempting faculty login with:", {
+        email,
+        password
+      });
+      const {
+        error
+      } = await signIn(email, password);
       if (!error) {
         toast.success("Faculty login successful!");
         console.log("Faculty login successful, should redirect to dashboard");
@@ -85,20 +93,15 @@ const LoginPage = () => {
       toast.error("Login failed. Please try again.");
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-college-600 mx-auto mb-4"></div>
           <p className="text-college-600">Loading...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-college-50 to-college-100 p-4">
+  return <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-college-50 to-college-100 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center gap-2">
           <Logo />
@@ -111,24 +114,14 @@ const LoginPage = () => {
         </div>
 
         <Card className="p-6 shadow-lg">
-          <Tabs
-            defaultValue="student"
-            value={loginType}
-            onValueChange={(value) => setLoginType(value as "student" | "faculty")}
-            className="w-full"
-          >
+          <Tabs defaultValue="student" value={loginType} onValueChange={value => setLoginType(value as "student" | "faculty")} className="w-full">
             <TabsList className="grid grid-cols-2 mb-6 w-full">
               <TabsTrigger value="student">Student</TabsTrigger>
               <TabsTrigger value="faculty">Faculty</TabsTrigger>
             </TabsList>
             <TabsContent value="student">
               <StudentLoginForm onSubmit={handleStudentLogin} />
-              <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                <p className="text-sm text-blue-700 font-medium">Test Student Login:</p>
-                <p className="text-xs text-blue-600">PRN: 1234567890123</p>
-                <p className="text-xs text-blue-600">Name: John Doe</p>
-                <p className="text-xs text-blue-500 mt-1">Note: Student accounts are created automatically on first login</p>
-              </div>
+              
             </TabsContent>
             <TabsContent value="faculty">
               <FacultyLoginForm onSubmit={handleFacultyLogin} />
@@ -145,8 +138,6 @@ const LoginPage = () => {
           © {new Date().getFullYear()} CampusQR Attendance System
         </p>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default LoginPage;
