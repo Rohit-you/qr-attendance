@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { QRData } from "@/types";
@@ -44,8 +43,20 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
         }
       };
 
-      const onScanErrorCallback = (error: string) => {
-        // This callback is called frequently, we can ignore most errors.
+      const onScanErrorCallback = (errorMessage: string) => {
+        // This callback can be noisy. We'll filter for meaningful errors.
+        // "NotFoundException" is thrown when no QR is found in a camera frame.
+        if (errorMessage.includes("NotFoundException")) {
+          return;
+        }
+        
+        // Handle the specific error shown in the user's screenshot.
+        if (errorMessage.includes("No MultiFormat Readers")) {
+          onScanError("Could not read QR code from image. Please try again with a clear image of just the QR code.");
+        } else {
+          // Pass other errors up to the parent component.
+          onScanError(errorMessage);
+        }
       };
 
       scanner.render(onScanSuccessCallback, onScanErrorCallback);
