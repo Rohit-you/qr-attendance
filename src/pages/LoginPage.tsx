@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import StudentLoginForm from "@/components/StudentLoginForm";
 import FacultyLoginForm from "@/components/FacultyLoginForm";
 import Logo from "@/components/Logo";
-import { useEffect } from "react";
 
 const LoginPage = () => {
   const [loginType, setLoginType] = useState<"student" | "faculty">("student");
@@ -25,18 +24,16 @@ const LoginPage = () => {
     try {
       console.log("Attempting student login with:", { prn, name });
       
-      // Create a valid email format using student prefix
       const studentEmail = `student${prn}@college.edu`;
-      const studentPassword = prn; // Use PRN as password for simplicity
+      const studentPassword = prn;
       
-      console.log("Using email format:", studentEmail);
+      console.log("Using email format for student:", studentEmail);
       
-      // First try to sign in
       let { error } = await signIn(studentEmail, studentPassword);
       
       if (error && error.message === "Invalid login credentials") {
-        console.log("Student not found, creating new account...");
-        // If login fails, try to create the student account
+        console.log("Student not found, proceeding to create a new account.");
+        
         const signUpResult = await signUp(studentEmail, studentPassword, {
           name: name,
           role: 'student',
@@ -44,31 +41,28 @@ const LoginPage = () => {
         });
         
         if (signUpResult.error) {
-          console.error("Student signup error:", signUpResult.error);
-          toast.error("Failed to create student account. Please try again.");
+          if (signUpResult.error.message.includes("User already registered")) {
+            toast.info("This account already exists. Please check your email to verify your account before logging in.");
+          } else {
+            console.error("Student signup error:", signUpResult.error);
+            toast.error("Failed to create student account. Please try again.");
+          }
           return;
         }
         
-        // After successful signup, try to sign in again
-        const signInResult = await signIn(studentEmail, studentPassword);
-        if (signInResult.error) {
-          console.error("Student login after signup error:", signInResult.error);
-          toast.error("Account created but login failed. Please try logging in again.");
-          return;
-        }
-        
-        toast.success("Student account created and logged in successfully!");
-        console.log("Student account created and login successful");
+        toast.success("Account created! Please check your email to verify your account, then you can log in.");
+        console.log("Student account created. Awaiting email verification.");
+
       } else if (!error) {
         toast.success("Student login successful!");
-        console.log("Student login successful, should redirect to dashboard");
+        console.log("Student login successful, redirecting to dashboard...");
       } else {
-        console.error("Student login error:", error);
-        toast.error("Student login failed. Please check your PRN and name.");
+        console.error("An unexpected student login error occurred:", error);
+        toast.error("Student login failed. Please check your details and try again.");
       }
     } catch (error) {
-      console.error("Student login error:", error);
-      toast.error("Student login failed. Please try again.");
+      console.error("Caught an error during student login:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -89,7 +83,6 @@ const LoginPage = () => {
     }
   };
 
-  // Show loading while checking auth state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-college-50 to-college-100">
