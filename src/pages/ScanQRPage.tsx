@@ -23,10 +23,12 @@ const ScanQRPage = () => {
   const handleScanSuccess = (data: QRData) => {
     setScannedData(data);
     setError(null);
+    console.log("[ScanQRPage] QR scanned:", data);
   };
 
   const handleScanError = (errorMessage: string) => {
     setError(errorMessage);
+    console.warn("[ScanQRPage] Scan error:", errorMessage);
   };
 
   const handleMarkAttendance = async () => {
@@ -36,27 +38,43 @@ const ScanQRPage = () => {
     }
 
     try {
-      // Verify QR code is still valid in database
+      // Fetch QR code from DB and log the ID
+      console.log("[ScanQRPage] Checking QR code with id:", scannedData.id);
       const qrCode = await supabaseAttendanceService.getQRCode(scannedData.id);
+
       if (!qrCode) {
-        setError("QR code is invalid or expired");
-        toast.error("QR code is invalid or expired");
+        const message =
+          "QR code is invalid or expired [id: " + scannedData.id + "]";
+        setError(message);
+        toast.error(message);
         return;
       }
 
-      // Mark attendance
+      // Mark attendance and log info
       await supabaseAttendanceService.markAttendance({
         student_id: user.id,
         qr_code_id: scannedData.id,
-        subject_id: scannedData.subjectId
+        subject_id: scannedData.subjectId,
       });
 
       setSuccess(true);
+      setError(null);
       toast.success("Attendance marked successfully!");
+      console.log(
+        "[ScanQRPage] Attendance marked for student:",
+        user.id,
+        "qr:",
+        scannedData.id
+      );
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to mark attendance";
+      const errorMessage =
+        (err.message || "Failed to mark attendance") +
+        " (QR: " +
+        (scannedData?.id || "n/a") +
+        ")";
       setError(errorMessage);
       toast.error(errorMessage);
+      console.error("[ScanQRPage] Mark attendance error:", err);
     }
   };
 
@@ -64,6 +82,7 @@ const ScanQRPage = () => {
     setScannedData(null);
     setError(null);
     setSuccess(false);
+    console.log("[ScanQRPage] Reset scan.");
   };
 
   return (
@@ -79,18 +98,21 @@ const ScanQRPage = () => {
             )}
 
             {success ? (
-              <SuccessDisplay qrData={scannedData} onScanAgain={handleScanAgain} />
+              <SuccessDisplay
+                qrData={scannedData}
+                onScanAgain={handleScanAgain}
+              />
             ) : scannedData ? (
-              <QRDataDisplay 
-                data={scannedData} 
-                onMarkAttendance={handleMarkAttendance} 
+              <QRDataDisplay
+                data={scannedData}
+                onMarkAttendance={handleMarkAttendance}
                 onScanAgain={handleScanAgain}
               />
             ) : (
-              <QRScanner 
-                onScanSuccess={handleScanSuccess} 
-                onScanError={handleScanError} 
-                isMobile={isMobile} 
+              <QRScanner
+                onScanSuccess={handleScanSuccess}
+                onScanError={handleScanError}
+                isMobile={isMobile}
               />
             )}
           </CardContent>
@@ -101,3 +123,4 @@ const ScanQRPage = () => {
 };
 
 export default ScanQRPage;
+

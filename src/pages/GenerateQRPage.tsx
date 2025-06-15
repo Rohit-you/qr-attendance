@@ -2,112 +2,70 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { generateQRCode } from "@/services/QRCodeService";
-import { QRData } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
-import QRGeneratorForm from "@/components/qr/QRGeneratorForm";
 import QRCodeDisplay from "@/components/qr/QRCodeDisplay";
+import QRGeneratorForm from "@/components/qr/QRGeneratorForm";
+import { QRData } from "@/types";
+import { toast } from "sonner";
+import { generateQRCode } from "@/services/QRCodeService";
+import { supabaseAttendanceService } from "@/services/SupabaseAttendanceService";
 
-const predefinedSubjects = [
-  { id: "550e8400-e29b-41d4-a716-446655440001", name: "DBMS", code: "DBMS" },
-  { id: "550e8400-e29b-41d4-a716-446655440002", name: "DSA", code: "DSA" },
-  { id: "550e8400-e29b-41d4-a716-446655440003", name: "CAO", code: "CAO" },
-  { id: "550e8400-e29b-41d4-a716-446655440004", name: "DLDM", code: "DLDM" },
-  { id: "550e8400-e29b-41d4-a716-446655440005", name: "DAA", code: "DAA" },
-  { id: "550e8400-e29b-41d4-a716-446655440006", name: "Math 1", code: "MATH1" },
-  { id: "550e8400-e29b-41d4-a716-446655440007", name: "Math 2", code: "MATH2" },
-  { id: "550e8400-e29b-41d4-a716-446655440008", name: "Math 3", code: "MATH3" },
-  { id: "550e8400-e29b-41d4-a716-446655440009", name: "ML", code: "ML" },
-  { id: "550e8400-e29b-41d4-a716-446655440010", name: "SQL", code: "SQL" },
-];
-
+// The main page component
 const GenerateQRPage = () => {
-  const { user } = useAuth();
-  const [generatedQR, setGeneratedQR] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [qrString, setQrString] = useState<string | null>(null);
   const [qrData, setQrData] = useState<QRData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleGenerateQR = async (selectedSubjectId: string, date: string, time: string) => {
-    console.log("Generate QR clicked");
-    console.log("Selected Subject ID:", selectedSubjectId);
-    console.log("Date:", date);
-    console.log("Time:", time);
+  const handleGenerate = async (payload: Omit<QRData, "id">) => {
+    setLoading(true);
+    setQrString(null);
+    setQrData(null);
 
-    if (!selectedSubjectId || !date || !time) {
-      toast.error("Please fill all fields");
-      console.log("Validation failed:", { selectedSubjectId, date, time });
-      return;
-    }
-
-    if (!user) {
-      toast.error("User not authenticated");
-      return;
-    }
-
-    setIsLoading(true);
     try {
-      const selectedSubject = predefinedSubjects.find(s => s.id === selectedSubjectId);
-      if (!selectedSubject) {
-        toast.error("Subject not found");
-        console.log("Subject not found for ID:", selectedSubjectId);
+      // Store the QR code in the database and only use the returned "id"
+      const qr = await supabaseAttendanceService.createQRCode({
+        subject_id: payload.subjectId,
+        faculty_id: payload.facultyId,
+        class_date: payload.date,
+        class_time: payload.time,
+        expires_at: payload.expiresAt,
+      });
+
+      if (!qr) {
+        toast.error("Could not create QR code in database.");
+        setLoading(false);
         return;
       }
 
-      console.log("Found subject:", selectedSubject);
-
-      // Set expiration to 2 hours from now
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 2);
-
-      console.log("Creating QR code with data:", {
-        subject_id: selectedSubjectId,
-        faculty_id: user.id,
-        class_date: date,
-        class_time: time,
-        expires_at: expiresAt.toISOString()
-      });
-
-      // Create QR code in database
-      const qrCode = await supabaseAttendanceService.createQRCode({
-        subject_id: selectedSubjectId,
-        faculty_id: user.id,
-        class_date: date,
-        class_time: time,
-        expires_at: expiresAt.toISOString()
-      });
-
-      if (!qrCode) {
-        toast.error("Failed to create QR code");
-        return;
-      }
-
-      const qrDataObj: QRData = {
-        id: qrCode.id,
-        subject: selectedSubject.name,
-        subjectId: selectedSubjectId,
-        date,
-        time,
-        facultyId: user.id,
-        expiresAt: expiresAt.toISOString()
+      // Construct the QRData from db row (using db-provided id)
+      const qrPayload: QRData = {
+        id: qr.id,
+        subject: payload.subject,
+        subjectId: payload.subjectId,
+        date: payload.date,
+        time: payload.time,
+        facultyId: payload.facultyId,
+        expiresAt: payload.expiresAt,
       };
 
-      const qrString = generateQRCode(qrDataObj);
-      setGeneratedQR(qrString);
-      setQrData(qrDataObj);
-      toast.success("QR code generated successfully!");
-    } catch (error) {
-      console.error("Error generating QR code:", error);
-      toast.error("Failed to generate QR code");
-    } finally {
-      setIsLoading(false);
+      // Generate the QR string to display from the actual DB record
+      const qrStr = generateQRCode(qrPayload);
+
+      // Log for debugging
+      console.log("[GenerateQRPage] Generated QRData for display:", qrPayload);
+
+      setQrData(qrPayload);
+      setQrString(qrStr);
+    } catch (error: any) {
+      toast.error("Failed to generate QR code.");
+      console.error("[GenerateQRPage] QR code generation error:", error);
     }
+    setLoading(false);
   };
 
-  const handleResetForm = () => {
-    setGeneratedQR(null);
+  const handleReset = () => {
     setQrData(null);
+    setQrString(null);
+    setLoading(false);
   };
 
   return (
@@ -115,16 +73,13 @@ const GenerateQRPage = () => {
       <div className="max-w-md mx-auto">
         <Card>
           <CardContent className="pt-6">
-            <QRGeneratorForm
-              onGenerateQR={handleGenerateQR}
-              isLoading={isLoading}
-            />
-
-            {generatedQR && qrData && (
+            {!qrData || !qrString ? (
+              <QRGeneratorForm onGenerate={handleGenerate} loading={loading} />
+            ) : (
               <QRCodeDisplay
-                qrString={generatedQR}
+                qrString={qrString}
                 qrData={qrData}
-                onReset={handleResetForm}
+                onReset={handleReset}
               />
             )}
           </CardContent>
@@ -135,3 +90,4 @@ const GenerateQRPage = () => {
 };
 
 export default GenerateQRPage;
+
