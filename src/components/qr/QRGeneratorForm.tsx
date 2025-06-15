@@ -18,10 +18,15 @@ const QRGeneratorForm = ({ onGenerateQR, isLoading }: QRGeneratorFormProps) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [subjectName, setSubjectName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [time, setTime] = useState("");
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
 
-  // Calculate expiresAt
-  const expiresAt = new Date(new Date(date + "T" + (time || "00:00")).getTime() + 15 * 60000).toISOString();
+  // Calculate expiresAt, increased to 30 minutes
+  const expiresAt = new Date(new Date(date + "T" + (time || "00:00")).getTime() + 30 * 60000).toISOString();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

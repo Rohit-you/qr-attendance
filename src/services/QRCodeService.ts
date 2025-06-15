@@ -33,7 +33,15 @@ export const parseQRCode = (qrString: string): QRData => {
     
     // Check if QR code has expired
     const expirationTime = new Date(parsed.expiresAt);
-    if (expirationTime < new Date()) {
+    const now = new Date();
+
+    console.log("Checking QR expiration:", {
+      expiresAt: parsed.expiresAt,
+      currentTime: now.toISOString(),
+      isExpired: expirationTime < now,
+    });
+    
+    if (expirationTime < now) {
       throw new Error("This QR code has expired.");
     }
     
