@@ -23,13 +23,16 @@ export const useAuthInitialization = () => {
 
   const createUserProfile = async (session: Session) => {
     try {
-      const isStudent = session.user.email?.includes('@student.college.edu');
+      // ---- FIX HERE: new student detection ----
+      const isStudent =
+        session.user.email?.startsWith('student') &&
+        session.user.email?.endsWith('@college.edu');
       const newUser = await supabaseAttendanceService.createUser({
         id: session.user.id,
         email: session.user.email!,
         name: session.user.email?.split('@')[0] || 'User',
         role: isStudent ? 'student' : 'faculty',
-        prn: isStudent ? session.user.email?.split('@')[0] : undefined
+        prn: isStudent ? session.user.email?.replace('student', '').split('@')[0] : undefined,
       });
       console.log('Created new user profile:', newUser?.email);
       return newUser;
