@@ -1,0 +1,23 @@
+
+{
+  "name": "Campus QR Attendance",
+  "short_name": "QR Attendance",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "description": "Easy QR code-based attendance for campuses.",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48 72x72 96x96 128x128 144x144 192x192 256x256 384x384 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/opengraph-image-p98pqg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
