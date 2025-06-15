@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,7 @@ import ScanQRPage from "./pages/ScanQRPage";
 import AttendancePage from "./pages/AttendancePage";
 import ReportsPage from "./pages/ReportsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import StudentLoginPage from "@/pages/StudentLoginPage";
 import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
@@ -65,6 +65,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/student-login" element={<StudentLoginPage />} />
             <Route 
               path="/dashboard" 
               element={
