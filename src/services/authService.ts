@@ -6,7 +6,6 @@ import { SignUpData } from '@/types/auth';
 export class AuthService {
   async signUp(email: string, password: string, userData: SignUpData) {
     const redirectUrl = `${window.location.origin}/`;
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -20,18 +19,9 @@ export class AuthService {
       return { error };
     }
 
-    if (data.user) {
-      try {
-        await supabaseAttendanceService.createUser({
-          id: data.user.id,
-          email,
-          ...userData
-        });
-        console.log('User profile created during signup');
-      } catch (createError) {
-        console.error('Error creating user profile during signup:', createError);
-      }
-    }
+    // Do NOT preemptively create the user profile here.
+    // Instead, the AuthProvider/onAuthStateChange will handle profile creation
+    // after login (when session is established and auth.uid() will match).
 
     return { error: null };
   }
@@ -42,13 +32,11 @@ export class AuthService {
       email,
       password
     });
-    
     if (error) {
       console.error('Sign in error:', error);
     } else {
       console.log('Sign in successful');
     }
-    
     return { error };
   }
 
