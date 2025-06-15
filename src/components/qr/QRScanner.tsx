@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ScanLine, Camera } from "lucide-react";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
 import CustomButton from "@/components/CustomButton";
 import { QRData } from "@/types";
 import { parseQRCode } from "@/services/QRCodeService";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 interface QRScannerProps {
   onScanSuccess: (data: QRData) => void;
@@ -19,18 +20,57 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
     if (data) {
       try {
         const parsedData = parseQRCode(data);
-        if (parsedData) {
-          onScanSuccess(parsedData);
+        onScanSuccess(parsedData);
+        if (isMobile) {
           setScanning(false);
-        } else {
-          onScanError("Invalid QR code format");
         }
       } catch (err) {
         console.error("QR parsing error:", err);
-        onScanError("Invalid QR code format");
+        onScanError((err as Error).message || "Invalid QR code format");
       }
     }
   };
+  
+  // This effect hook will run only for non-mobile (web) clients
+  useEffect(() => {
+    if (isMobile) {
+      return;
+    }
+
+    const scanner = new Html5QrcodeScanner(
+      "qr-reader", // div ID
+      {
+        qrbox: {
+          width: 250,
+          height: 250,
+        },
+        fps: 5,
+      },
+      /* verbose= */ false
+    );
+
+    let hasScanned = false;
+    const onScanSuccessCallback = (decodedText: string) => {
+      if (!hasScanned) {
+        hasScanned = true;
+        scanner.clear();
+        handleScan(decodedText);
+      }
+    };
+
+    const onScanErrorCallback = (error: string) => {
+      // This callback is called frequently, so we can ignore it.
+    };
+
+    scanner.render(onScanSuccessCallback, onScanErrorCallback);
+
+    return () => {
+      // Check if scanner is still active before trying to clear it.
+      if (scanner && scanner.getState() === 2) { // 2 === SCANNING
+        scanner.clear().catch(err => console.error("Failed to clear scanner on unmount.", err));
+      }
+    };
+  }, [isMobile]);
 
   // Demo/fallback - simulate a successful QR code scan (browser only)
   const simulateQRScan = () => {
@@ -77,40 +117,42 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
 
   return (
     <>
-      {scanning ? (
-        <div className="flex flex-col items-center">
-          <div className="w-full max-w-sm h-64 bg-gray-100 rounded-md flex items-center justify-center mb-4 animate-pulse">
-            <div className="text-center">
-              <Camera size={48} className="mx-auto mb-2 text-gray-400 animate-bounce" />
-              <p className="text-gray-500">Camera is active...</p>
+      {isMobile ? (
+        <>
+          {scanning ? (
+            <div className="flex flex-col items-center">
+              <div className="w-full max-w-sm h-64 bg-gray-100 rounded-md flex items-center justify-center mb-4 animate-pulse">
+                <div className="text-center">
+                  <Camera size={48} className="mx-auto mb-2 text-gray-400 animate-bounce" />
+                  <p className="text-gray-500">Camera is active...</p>
+                </div>
+              </div>
+              <CustomButton variant="outline" onClick={() => setScanning(false)}>
+                Cancel Scanning
+              </CustomButton>
             </div>
-          </div>
-          <CustomButton variant="outline" onClick={() => setScanning(false)}>
-            Cancel Scanning
-          </CustomButton>
-        </div>
-      ) : (
-        <div className="text-center py-6">
-          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ScanLine size={48} className="text-primary" />
-          </div>
-          <h3 className="text-xl font-medium mb-4">Scan QR Code</h3>
-          <p className="text-gray-500 mb-6">
-            Tap the button below to scan a QR code and mark your attendance.
-          </p>
-          <CustomButton onClick={takePicture}>
-            Scan QR Code
-          </CustomButton>
-
-          {/* For demo purposes only - enables testing in web browser */}
-          {!isMobile && (
-            <div className="mt-4">
-              <p className="text-xs text-gray-400 mb-2">Demo mode (browser only)</p>
-              <CustomButton variant="outline" onClick={simulateQRScan}>
-                Simulate QR Scan
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ScanLine size={48} className="text-primary" />
+              </div>
+              <h3 className="text-xl font-medium mb-4">Scan QR Code</h3>
+              <p className="text-gray-500 mb-6">
+                Tap the button below to scan a QR code and mark your attendance.
+              </p>
+              <CustomButton onClick={takePicture}>
+                Scan QR Code
               </CustomButton>
             </div>
           )}
+        </>
+      ) : (
+        <div className="text-center py-2">
+          <h3 className="text-xl font-medium mb-4">Scan QR Code</h3>
+          <p className="text-gray-500 mb-6">
+            Place the QR code in front of your camera.
+          </p>
+          <div id="qr-reader" className="w-full max-w-sm mx-auto border rounded-md"></div>
         </div>
       )}
     </>
@@ -118,4 +160,3 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
 };
 
 export default QRScanner;
-
