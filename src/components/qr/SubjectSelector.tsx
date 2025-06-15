@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 
 interface SubjectSelectorProps {
   selectedSubjectId: string;
-  onSubjectSelect: (subjectId: string) => void;
+  onSubjectSelect: (subjectId: string, subjectName: string) => void;
 }
 
 const predefinedSubjects = [
@@ -23,10 +23,17 @@ const predefinedSubjects = [
 const SubjectSelector = ({ selectedSubjectId, onSubjectSelect }: SubjectSelectorProps) => {
   console.log("Current selected subject ID in selector:", selectedSubjectId);
   
+  const handleValueChange = (subjectId: string) => {
+    const selectedSubject = predefinedSubjects.find(subject => subject.id === subjectId);
+    if (selectedSubject) {
+      onSubjectSelect(subjectId, selectedSubject.name);
+    }
+  };
+  
   return (
     <div className="space-y-2">
       <Label htmlFor="subject">Subject</Label>
-      <Select value={selectedSubjectId} onValueChange={onSubjectSelect}>
+      <Select value={selectedSubjectId} onValueChange={handleValueChange}>
         <SelectTrigger>
           <SelectValue placeholder="Select a subject" />
         </SelectTrigger>

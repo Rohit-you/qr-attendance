@@ -29,6 +29,10 @@ const QRGeneratorForm = ({ onGenerateQR, isLoading }: QRGeneratorFormProps) => {
       toast.error("Could not find faculty user information. Please log in again.");
       return;
     }
+    if (!selectedSubjectId || !subjectName) {
+      toast.error("Please select a subject");
+      return;
+    }
     // Compose payload, make sure you update with real facultyId and subject name/codes as per your app logic
     onGenerateQR({
       subject: subjectName,
@@ -40,11 +44,9 @@ const QRGeneratorForm = ({ onGenerateQR, isLoading }: QRGeneratorFormProps) => {
     });
   };
 
-  const handleSubjectSelect = (subjectId: string) => {
+  const handleSubjectSelect = (subjectId: string, subjectName: string) => {
     setSelectedSubjectId(subjectId);
-    // Optionally set subjectName here depending on how you want to map subjectId to names
-    // For now, just set as blank (should be replaced)
-    setSubjectName(""); // TODO: Get subject name by id if needed
+    setSubjectName(subjectName);
   };
 
   return (
