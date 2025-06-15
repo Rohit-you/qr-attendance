@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import CustomButton from "@/components/CustomButton";
 import SubjectSelector from "./SubjectSelector";
 import { QRData } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface QRGeneratorFormProps {
   onGenerateQR: (payload: Omit<QRData, "id">) => void;
@@ -12,24 +14,28 @@ interface QRGeneratorFormProps {
 }
 
 const QRGeneratorForm = ({ onGenerateQR, isLoading }: QRGeneratorFormProps) => {
+  const { user } = useAuth();
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [subjectName, setSubjectName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("");
-  // You might want to get facultyId and expiresAt from context, user, or generate here
-  // For now let's use dummy placeholders for illustration
-  const dummyFacultyId = "faculty-placeholder";
-  const expiresAt = new Date(new Date(date + "T" + (time || "00:00")).getTime() + 15 * 60000).toISOString(); // expire 15min after start
+
+  // Calculate expiresAt
+  const expiresAt = new Date(new Date(date + "T" + (time || "00:00")).getTime() + 15 * 60000).toISOString();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !user.id) {
+      toast.error("Could not find faculty user information. Please log in again.");
+      return;
+    }
     // Compose payload, make sure you update with real facultyId and subject name/codes as per your app logic
     onGenerateQR({
       subject: subjectName,
       subjectId: selectedSubjectId,
       date,
       time,
-      facultyId: dummyFacultyId,
+      facultyId: user.id,
       expiresAt,
     });
   };
