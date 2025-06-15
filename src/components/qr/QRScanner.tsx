@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ScanLine, Camera } from "lucide-react";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
@@ -46,9 +47,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
       });
 
       if (image && image.base64String) {
-        // In a real app, you'd use a QR code reader library to decode the image
-        // For now, let's simulate a successful scan using mock data
-        simulateQRScan();
+        // QR को decode करने के लिए यहाँ पर आगे कभी रीडर लाइब्रेरी को integrate कर सकते हैं
+        // फिलहाल के लिए user से actual QR image लेने के बाद सपोर्ट दे सकते हैं
+        // onScanError("QR decoding अभी सिर्फ असली स्कैनिंग से ही supported है");
+        setScanning(false);
+        onScanError("QR कोड डिकोडिंग अभी सिर्फ असली कैम्पस QR से ही supported है।");
       } else {
         setScanning(false);
       }
@@ -59,21 +62,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
     }
   };
 
-  // For demo/fallback purposes only - simulates a successful QR code scan
-  const simulateQRScan = () => {
-    const mockQrData: QRData = {
-      id: "mock-qr-id-123",
-      subject: "Computer Science 101",
-      subjectId: "subject-cs101-id",
-      date: new Date().toISOString().split("T")[0],
-      time: "10:00",
-      facultyId: "faculty-123",
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes from now
-    };
-
-    const qrString = JSON.stringify(mockQrData);
-    handleScan(qrString);
-  };
+  // demo/simulateQRScan function और demo बटन हटा दिए गए
 
   return (
     <>
@@ -101,16 +90,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, isMob
           <CustomButton onClick={takePicture}>
             Scan QR Code
           </CustomButton>
-          
-          {/* For demo purposes only - enables testing in web browser */}
-          {!isMobile && (
-            <div className="mt-4">
-              <p className="text-xs text-gray-400 mb-2">Demo mode (browser only)</p>
-              <CustomButton variant="outline" onClick={simulateQRScan}>
-                Simulate QR Scan
-              </CustomButton>
-            </div>
-          )}
         </div>
       )}
     </>
